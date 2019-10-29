@@ -1,0 +1,7 @@
+names=read.csv("/Users/bapoorva/Desktop/project/Vera/Tbx4_Tsc2/data/fastqlist_STAR.csv")
+names$name_1=paste0(names$SAMP_name,"_R1",sep="")
+names$name_2=paste0(names$SAMP_name,"_R2",sep="")
+r = paste('mv "',names$mate1,'" "',names$name_1,'.fastq.gz"',sep="")
+r1= paste('mv "',names$mate2,'" "',names$name_2,'.fastq.gz"',sep="")
+r=c(r,r1)
+write(r, file="~/Desktop/file.txt", sep="\n")
