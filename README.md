@@ -7,3 +7,5 @@ This repository has a collection of scripts for various NGS data analysis pipeli
 2. Create enrichment plot from RNA-Seq data
 
 3. Single-cell ATAC-Seq analysis using [Signac](https://satijalab.org/signac/)
+
+4. Ligand Receptor interaction using [cellphoneDB](https://github.com/Teichlab/cellphonedb)
