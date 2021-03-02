@@ -26,12 +26,18 @@ scrna= RunQC(dir=outdir,org=org,name=projectname,files=input10x ,filter=T, doubl
 scrna = processExper(scrna ,ccscale = T, sc.transform = T)
 
 scrna= PCATools(scrna, npcs=npcs, jackstraw=T, plotdir = outdir)
+
+png(file=paste0(plotdir,"/elbowplot.png",sep=""), height = 15, width = 15, units = "in", res=500)
+ElbowPlot(scrna, ndims = npcs)
+dev.off()
+
 png(file=paste0(outdir,"/jackstraw.png",sep=""), height = 15, width = 15, units = "in", res=500)
 JackStrawPlot(scrna, dims = 1:npcs)
 dev.off()
 
 npcs =30
 scrna <- ClusterDR(scrna,dims=1:npcs,n.neighbors =k)
+scrna = RunDoubletfinder(scrna, dims=npcs,group="var_cluster",doublet.formrate =0.75, sct=T)
 
 scrna <- RunLigRec(scrna,org=org, group.by = "var_cluster")
 
