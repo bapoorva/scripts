@@ -11,7 +11,7 @@ my %param =(
 'FASTALIST' => undef,
 'PROJECTNAME' => './',
 'THREADS' => 1,
-'ADAPTER' =>'nextera',
+'ADAPTER' =>'illumina',
 'JOBS' => 1,
 'MERGE' =>1,
 'DEDUP' =>0,
@@ -47,13 +47,14 @@ $adapterseq='CTGTCTCTTATACACATCT';
 $param{'ALNDIR'} ="$param{'PROJECTNAME'}/STAR";
 $param{'RESULTSDIR'} ="$param{'PROJECTNAME'}/results";
 $param{'DATADIR'} ="$param{'PROJECTNAME'}/data";
-
+$param{'DIR'} ="`pwd`/$param{'PROJECTNAME'}";
 ########## use proper reFlat file for metrics #####################
 my $REFFLAT; 
     for ($param{'GENOME'}) {
         when (/hg19/) { $REFFLAT = '/project/labprojects/share/hg19_data/Homo_sapiens.GRCh37.75.refflat' }
         when (/mm9/) { $REFFLAT = '/project/labprojects/share/mm9_data/refFlat.txt' }
         when (/mm10/) { $REFFLAT = '/project/labprojects/share/mm10_data/refFlat.txt' }
+        when (/mm39/) { $REFFLAT = '/project/labprojects/share/mm39_data/refFlat.txt' }
         default       { $REFFLAT='' }
     }
 
@@ -113,7 +114,7 @@ foreach (keys %samples)
 {
 	$pm->start and next;
 		if($param{'ALIGN'}){
-	my $STARcmd = "STAR --runThreadN $param{'THREADS'}  --limitBAMsortRAM  10000000000 --runMode alignReads --genomeDir /project/labprojects/share/".$param{'GENOME'}."_STAR --outSAMtype BAM SortedByCoordinate --clip3pAdapterSeq $adapterseq --outReadsUnmapped Fastx --quantMode GeneCounts --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04   --alignIntronMin 20   --alignIntronMax 1000000  --alignSJoverhangMin 8   --alignSJDBoverhangMin 1 --sjdbScore 1 --alignMatesGapMax 1000000 --readFilesCommand zcat --readFilesIn $samples{$_}->{'mate1'} $samples{$_}->{'mate2'} --outFileNamePrefix $param{'ALNDIR'}/$_";
+	my $STARcmd = "STAR --runThreadN $param{'THREADS'}  --limitBAMsortRAM  10000000000 --runMode alignReads --genomeDir /project/labprojects/share/".$param{'GENOME'}."_STAR --outSAMtype BAM SortedByCoordinate --clip3pAdapterSeq $adapterseq $adapterseq --clip3pAdapterMMp 0.1 0.1 --outReadsUnmapped Fastx --quantMode GeneCounts --outFilterType BySJout --outSAMattributes NH HI AS NM MD --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterScoreMinOverLread 0.4 --outFilterMatchNminOverLread 0.4  --alignIntronMin 20   --alignIntronMax 1000000  --alignSJoverhangMin 8   --alignSJDBoverhangMin 1 --sjdbScore 1 --alignMatesGapMax 1000000 --readFilesCommand zcat --readFilesIn $samples{$_}->{'mate1'} $samples{$_}->{'mate2'} --outFileNamePrefix $param{'ALNDIR'}/$_";
 
 		print $STARcmd,"\n";		
 		system($STARcmd);
@@ -122,7 +123,7 @@ foreach (keys %samples)
 
 ### dedup the samples
 	if($param{'DEDUP'}){
-		my $mrkDupcmd = "java -jar ~/picard/picard.jar MarkDuplicates I= $param{'ALNDIR'}/".$_."Aligned.sortedByCoord.out.bam O= $param{'ALNDIR'}/".$_."_dedupped.bam  CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=$param{'ALNDIR'}/".$_.".mrkdupfull TMP_DIR=`pwd`/tmp";
+		my $mrkDupcmd = "java -jar /home/bapoorva/picard/picard.jar MarkDuplicates I= $param{'ALNDIR'}/".$_."Aligned.sortedByCoord.out.bam O= $param{'ALNDIR'}/".$_."_dedupped.bam REMOVE_DUPLICATES=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=$param{'ALNDIR'}/".$_.".mrkdupfull";
 		print $mrkDupcmd,"\n";
 		system($mrkDupcmd);
 		system("grep LIBRARY -A1 $param{'ALNDIR'}/".$_.".mrkdupfull > $param{'ALNDIR'}/".$_.".mrkdup");
@@ -130,14 +131,14 @@ foreach (keys %samples)
 	}
 
 	if($param{'METRICS'}){
-		my $metricscmd = "java -jar ~/picard/picard.jar CollectRnaSeqMetrics I= $param{'ALNDIR'}/".$_."Aligned.sortedByCoord.out.bam O=$param{'ALNDIR'}/".$_.".metricsfull REF_FLAT=$REFFLAT STRAND=SECOND_READ_TRANSCRIPTION_STRAND";
+		my $metricscmd = "java -jar /home/bapoorva/picard/picard.jar CollectRnaSeqMetrics I= $param{'ALNDIR'}/".$_."Aligned.sortedByCoord.out.bam O=$param{'ALNDIR'}/".$_.".metricsfull REF_FLAT=$REFFLAT STRAND=SECOND_READ_TRANSCRIPTION_STRAND";
 		print $metricscmd,"\n";
 		system($metricscmd);
 		system("grep PF_BASES -A1 $param{'ALNDIR'}/".$_.".metricsfull > $param{'ALNDIR'}/".$_.".metrics");
 		}
 
 	if($param{'LIBCOMPLEX'}){
-		my $libcomplexcmd = "java -jar ~/picard/picard.jar EstimateLibraryComplexity I= $param{'ALNDIR'}/".$_."Aligned.sortedByCoord.out.bam O=$param{'ALNDIR'}/".$_.".libcomplexfull TMP_DIR=`pwd`/tmp";
+		my $libcomplexcmd = "java -jar /home/bapoorva/picard/picard.jar EstimateLibraryComplexity I= $param{'ALNDIR'}/".$_."Aligned.sortedByCoord.out.bam O=$param{'ALNDIR'}/".$_.".libcomplexfull";
 		print $libcomplexcmd,"\n";
 		system($libcomplexcmd);
 		system("grep LIBRARY -A1 $param{'ALNDIR'}/".$_.".libcomplexfull > $param{'ALNDIR'}/".$_.".libcomplex");
@@ -157,10 +158,16 @@ foreach (keys %samples)
 
 $pm->wait_all_children;
 
-	$Summ_cmd = "~/ngs/bin/parseSTARLog.pl --dir $param{'ALNDIR'} > $param{'RESULTSDIR'}/STAR_summmary.csv";
+#create star summary file
+	$Summ_cmd = "perl ~/ngs/bin/parseSTARLog.pl --dir $param{'ALNDIR'} > $param{'RESULTSDIR'}/STAR_summary.csv";
 	print $Summ_cmd,"\n";
 	system($Summ_cmd);
 
+#run Rscript to create star summary RData for the website
+	$R_cmd = "Rscript --vanilla ~/ngs/bin/createsummary.R $param{'DIR'}";
+	print $R_cmd,"\n";
+	system($R_cmd);
+	
 
 
 print "Run complete\n";
